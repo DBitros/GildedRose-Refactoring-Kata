@@ -1,7 +1,11 @@
+import { ITEM_NAMES } from './itemConstants';
+
 export class Item {
   name: string;
-  sellIn: number;
-  quality: number;
+  sellIn: number; // number of days we have to sell the item
+  quality: number; // how valubale the item is
+
+  // Note: the end of each day the system lowers both of the above values
 
   constructor(name, sellIn, quality) {
     this.name = name;
@@ -18,52 +22,74 @@ export class GildedRose {
   }
 
   updateQuality() {
-    for (let i = 0; i < this.items.length; i++) {
-      if (this.items[i].name != 'Aged Brie' && this.items[i].name != 'Backstage passes to a TAFKAL80ETC concert') {
-        if (this.items[i].quality > 0) {
-          if (this.items[i].name != 'Sulfuras, Hand of Ragnaros') {
-            this.items[i].quality = this.items[i].quality - 1
-          }
-        }
+    for (let item of this.items) {
+      if (item.name === ITEM_NAMES.SULFURAS) {
+        this.updateSulfuras(item);
+      } else if (item.name === ITEM_NAMES.AGED_BRIE) {
+        this.updateAgedBrie(item);
+      } else if (item.name === ITEM_NAMES.BACKSTAGE_PASSES) {
+        this.updateBackstagePass(item);
       } else {
-        if (this.items[i].quality < 50) {
-          this.items[i].quality = this.items[i].quality + 1
-          if (this.items[i].name == 'Backstage passes to a TAFKAL80ETC concert') {
-            if (this.items[i].sellIn < 11) {
-              if (this.items[i].quality < 50) {
-                this.items[i].quality = this.items[i].quality + 1
-              }
-            }
-            if (this.items[i].sellIn < 6) {
-              if (this.items[i].quality < 50) {
-                this.items[i].quality = this.items[i].quality + 1
-              }
-            }
-          }
-        }
+        this.updateNormalItem(item);
       }
-      if (this.items[i].name != 'Sulfuras, Hand of Ragnaros') {
-        this.items[i].sellIn = this.items[i].sellIn - 1;
+      this.enforceQualityBounds(item);
+    }
+    return this.items;
+  }
+
+  updateSulfuras(item: Item) {
+    // Sulfuras does not change, as its a legendary item that never has to be sold or decreases in Quality
+  }
+
+  updateAgedBrie(item: Item) {
+    if (item.quality < 50) {
+      item.quality += 1;
+    }
+
+    item.sellIn -= 1;
+    this.degradeQualityByDouble(item)
+  }
+
+  updateBackstagePass(item: Item) {
+    if (item.quality < 50) {
+      item.quality += 1;
+      if (item.sellIn < 11) {
+        item.quality += 1;
       }
-      if (this.items[i].sellIn < 0) {
-        if (this.items[i].name != 'Aged Brie') {
-          if (this.items[i].name != 'Backstage passes to a TAFKAL80ETC concert') {
-            if (this.items[i].quality > 0) {
-              if (this.items[i].name != 'Sulfuras, Hand of Ragnaros') {
-                this.items[i].quality = this.items[i].quality - 1
-              }
-            }
-          } else {
-            this.items[i].quality = this.items[i].quality - this.items[i].quality
-          }
-        } else {
-          if (this.items[i].quality < 50) {
-            this.items[i].quality = this.items[i].quality + 1
-          }
-        }
+      if (item.sellIn < 6) {
+        item.quality += 1;
       }
     }
 
-    return this.items;
+    item.sellIn -= 1;
+
+    if (item.sellIn < 0) {
+      item.quality = 0;
+    }
+  }
+
+  updateNormalItem(item: Item) {
+    if (item.quality > 0) {
+      item.quality -= 1;
+    }
+
+    item.sellIn -= 1;
+
+    this.degradeQualityByDouble(item)
+  }
+
+  degradeQualityByDouble(item: Item) {
+    // degrade quality twice as fast if sell by date has passed
+    if (item.sellIn < 0 && item.quality > 0) {
+      item.quality -= 1;
+    }
+  }
+
+  enforceQualityBounds(item: Item) {
+    if (item.quality < 0) {
+      item.quality = 0;
+    } else if (item.quality > 50 && item.name !== ITEM_NAMES.SULFURAS) {
+      item.quality = 50;
+    }
   }
 }
